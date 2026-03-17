@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>반찬마루</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f8f5f0; color: #333; min-height: 100vh; }
+  header { background: linear-gradient(135deg, #e8703a, #c94f2a); color: white; padding: 16px 20px; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  header h1 { font-size: 1.4rem; font-weight: 700; }
+  header span { font-size: 1.6rem; }
+  nav { display: flex; background: white; border-bottom: 2px solid #eee; overflow-x: auto; }
+  nav button { flex: 1; min-width: 80px; padding: 14px 8px; border: none; background: none; cursor: pointer; font-size: 0.85rem; color: #888; font-weight: 500; transition: all 0.2s; white-space: nowrap; }
+  nav button.active { color: #e8703a; border-bottom: 3px solid #e8703a; font-weight: 700; }
+  nav button:hover { background: #fff5f0; }
+  .tab { display: none; padding: 20px; max-width: 600px; margin: 0 auto; }
+  .tab.active { display: block; }
+
+  /* 공통 */
+  .card { background: white; border-radius: 16px; padding: 18px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .section-title { font-size: 0.95rem; font-weight: 700; color: #555; margin-bottom: 12px; }
+  .search-box { display: flex; gap: 8px; margin-bottom: 14px; }
+  .search-box input { flex: 1; padding: 12px 16px; border: 2px solid #ddd; border-radius: 12px; font-size: 1rem; outline: none; transition: border 0.2s; }
+  .search-box input:focus { border-color: #e8703a; }
+  .search-box button { padding: 12px 18px; background: #e8703a; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 1rem; }
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .tag { padding: 6px 14px; border-radius: 20px; border: 1.5px solid #ddd; background: white; cursor: pointer; font-size: 0.82rem; color: #666; transition: all 0.2s; }
+  .tag.active, .tag:hover { background: #e8703a; color: white; border-color: #e8703a; }
+
+  /* 결과 영역 */
+  .result-box { background: white; border-radius: 16px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); min-height: 80px; }
+  .result-text { font-size: 0.88rem; line-height: 1.9; color: #444; white-space: pre-wrap; }
+  .result-text h3 { font-size: 1rem; font-weight: 700; color: #e8703a; margin: 14px 0 6px; }
+  .result-text h3:first-child { margin-top: 0; }
+
+  /* 레시피 탭 */
+  .gram-calc { background: #fff8f4; border: 1.5px solid #f0c9b0; border-radius: 12px; padding: 14px; margin-bottom: 16px; }
+  .gram-calc h3 { font-size: 0.9rem; font-weight: 700; color: #e8703a; margin-bottom: 10px; }
+  .gram-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .gram-row label { flex: 1; font-size: 0.85rem; }
+  .gram-row input { width: 80px; padding: 6px 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 0.9rem; text-align: right; }
+  .calc-result { background: white; border-radius: 10px; padding: 10px 14px; margin-top: 8px; font-size: 0.85rem; line-height: 1.8; }
+  .steps { background: white; border-radius: 16px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .step { display: flex; gap: 12px; margin-bottom: 16px; }
+  .step-num { width: 28px; height: 28px; border-radius: 50%; background: #e8703a; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0; }
+  .step-text { font-size: 0.88rem; line-height: 1.6; color: #444; padding-top: 4px; }
+
+  /* 저장함 */
+  .saved-empty { text-align: center; padding: 60px 20px; color: #bbb; }
+  .saved-empty .icon { font-size: 3.5rem; margin-bottom: 12px; }
+  .saved-item { background: white; border-radius: 14px; padding: 16px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+  .saved-item .emoji { font-size: 2.2rem; flex-shrink: 0; }
+  .saved-item .detail { flex: 1; font-size: 0.83rem; color: #555; line-height: 1.6; }
+  .saved-item .detail h4 { font-size: 0.95rem; font-weight: 700; color: #333; margin-bottom: 4px; }
+  .del-btn { background: none; border: 1.5px solid #eee; border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 0.8rem; color: #bbb; flex-shrink: 0; }
+  .del-btn:hover { border-color: #e74c3c; color: #e74c3c; }
+
+  /* AI 추천 */
+  .chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { padding: 7px 14px; border-radius: 20px; border: 1.5px solid #ddd; background: white; cursor: pointer; font-size: 0.82rem; color: #666; transition: all 0.2s; }
+  .chip.selected { background: #e8703a; color: white; border-color: #e8703a; }
+  .ing-input { display: flex; gap: 8px; margin-bottom: 10px; }
+  .ing-input input { flex: 1; padding: 10px 14px; border: 1.5px solid #ddd; border-radius: 10px; font-size: 0.9rem; outline: none; }
+  .ing-input input:focus { border-color: #e8703a; }
+  .ing-input button { padding: 10px 14px; background: #e8703a; color: white; border: none; border-radius: 10px; cursor: pointer; }
+  .ing-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ing-tag { padding: 4px 12px; background: #fff0e8; color: #e8703a; border-radius: 12px; font-size: 0.8rem; cursor: pointer; }
+  .ing-tag:hover { background: #ffd5b8; }
+
+  /* 버튼 공통 */
+  .main-btn { width: 100%; padding: 14px; color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 8px; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .main-btn:hover { opacity: 0.9; }
+  .main-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+  .btn-orange { background: linear-gradient(135deg, #e8703a, #c94f2a); }
+  .btn-purple { background: linear-gradient(135deg, #6c5ce7, #a29bfe); }
+  .save-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #e8703a, #c94f2a); color: white; border: none; border-radius: 12px; font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-top: 14px; }
+
+  /* 로딩 */
+  .loading-wrap { display: flex; align-items: center; gap: 10px; padding: 16px 0; color: #aaa; font-size: 0.9rem; }
+  .spinner { width: 20px; height: 20px; border: 2px solid #eee; border-top-color: #e8703a; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* 웹검색 출처 */
+  .sources { margin-top: 12px; padding-top: 10px; border-top: 1px solid #eee; font-size: 0.75rem; color: #bbb; }
+  .sources a { color: #e8703a; text-decoration: none; }
+  .sources a:hover { text-decoration: underline; }
+
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 22px; border-radius: 20px; font-size: 0.85rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
+  .toast.show { opacity: 1; }
+
+  .badge-web { display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; background: #e8f4fd; color: #2980b9; border-radius: 8px; padding: 2px 8px; margin-left: 6px; vertical-align: middle; }
+</style>
+</head>
+<body>
+
+<header>
+  <span>🍱</span>
+  <h1>반찬마루 <span style="font-size:0.75rem;opacity:0.85;font-weight:400;">웹 검색 연동</span></h1>
+</header>
+
+<nav>
+  <button class="active" onclick="switchTab('search',this)">🔍 검색</button>
+  <button onclick="switchTab('recipe',this)">⚖️ 양념계산기</button>
+  <button onclick="switchTab('saved',this)">💾 저장함</button>
+  <button onclick="switchTab('ai',this)">🤖 AI 추천</button>
+</nav>
+
+<!-- 검색 탭 -->
+<div id="tab-search" class="tab active">
+  <div style="background: linear-gradient(135deg, #fff4ee, #ffe8d6); border: 1.5px solid #f0c9b0; border-radius: 16px; padding: 16px 18px; margin-bottom: 18px;">
+    <div style="font-size:1rem;font-weight:700;color:#c94f2a;margin-bottom:6px;">⚖️ 반찬마루의 양념계산기</div>
+    <div style="font-size:0.84rem;color:#7a4030;line-height:1.7;">
+      반찬 이름을 검색하면 <strong>메인 재료 g만 입력</strong>해도<br>
+      필요한 양념을 <strong>밥숟가락 기준</strong>으로 딱 계산해드려요!<br>
+      <span style="color:#e8703a;">👉 검색 → 양념계산기 탭에서 바로 확인하세요</span>
+    </div>
+  </div>
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="반찬 이름을 검색하세요..." onkeydown="if(event.key==='Enter')doSearch()">
+    <button onclick="doSearch()">🔍</button>
+  </div>
+  <div class="tags">
+    <span class="tag" data-query="간단한 나물 반찬" onclick="quickSearch(this)">나물</span>
+    <span class="tag" data-query="생선 조림 반찬" onclick="quickSearch(this)">조림</span>
+    <span class="tag" data-query="돼지고기 볶음 반찬" onclick="quickSearch(this)">볶음</span>
+    <span class="tag" data-query="채소 무침 반찬" onclick="quickSearch(this)">무침</span>
+    <span class="tag" data-query="된장찌개 레시피" onclick="quickSearch(this)">국·찌개</span>
+    <span class="tag" data-query="10분 완성 간단 반찬" onclick="quickSearch(this)">간단</span>
+    <span class="tag" data-query="아이 반찬 레시피" onclick="quickSearch(this)">아이반찬</span>
+    <span class="tag" data-query="밥도둑 반찬 레시피" onclick="quickSearch(this)">밥도둑</span>
+  </div>
+  <div id="searchResult"></div>
+</div>
+
+<!-- 레시피 탭 -->
+<div id="tab-recipe" class="tab">
+  <div id="recipeDetail">
+    <div class="card" style="text-align:center;padding:60px 20px;color:#bbb;">
+      <div style="font-size:3rem;margin-bottom:12px;">👆</div>
+      <p>검색 탭에서 반찬을 검색하고<br>레시피를 불러오세요</p>
+    </div>
+  </div>
+</div>
+
+<!-- 저장함 탭 -->
+<div id="tab-saved" class="tab">
+  <div id="savedList"></div>
+</div>
+
+<!-- AI 추천 탭 -->
+<div id="tab-ai" class="tab">
+  <div class="card">
+    <div class="section-title">🍽 식사 유형</div>
+    <div class="chip-group">
+      <span class="chip" onclick="toggleChip(this,'meal')">한식 일상</span>
+      <span class="chip" onclick="toggleChip(this,'meal')">도시락</span>
+      <span class="chip" onclick="toggleChip(this,'meal')">술안주</span>
+      <span class="chip" onclick="toggleChip(this,'meal')">아이반찬</span>
+      <span class="chip" onclick="toggleChip(this,'meal')">다이어트</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-title">⏱ 조리 시간</div>
+    <div class="chip-group">
+      <span class="chip" onclick="toggleChip(this,'time')">10분 이내</span>
+      <span class="chip" onclick="toggleChip(this,'time')">30분 이내</span>
+      <span class="chip" onclick="toggleChip(this,'time')">1시간 이상</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-title">🥕 가진 재료</div>
+    <div class="ing-input">
+      <input type="text" id="ingInput" placeholder="재료 입력 후 + 또는 Enter" onkeydown="if(event.key==='Enter')addIng()">
+      <button onclick="addIng()">+</button>
+    </div>
+    <div class="ing-tags" id="ingTags"></div>
+  </div>
+  <button class="main-btn btn-purple" id="aiBtn" onclick="getAiRecommend()">
+    🌐 웹 검색으로 AI 추천 받기
+  </button>
+  <div id="aiResult" style="margin-top:16px;display:none;"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let savedList = [];
+let ingredients = [];
+let currentRecipeName = '';
+let currentRecipeText = '';
+
+// ── 검색 탭 ──────────────────────────────
+async function doSearch() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) return;
+  showSearchLoading(`"${q}" 레시피를 인터넷에서 검색 중...`);
+  const prompt = `인터넷에서 "${q}" 한국 반찬 레시피를 검색해서 아래 형식으로 정리해주세요.
+
+## ${q} 레시피
+
+### 재료 (2인분 기준)
+- 재료 목록
+
+### 양념 비율 (그램 기준)
+- 각 양념: Xg
+
+### 조리 순서
+1. 단계별 설명
+
+### 요리 팁
+- 맛있게 만드는 팁 1~2가지
+
+최신 레시피 정보를 반영해서 정확하게 알려주세요.`;
+
+  await callClaudeWithSearch(prompt, 'searchResult', q);
+}
+
+function quickSearch(el) {
+  const query = el.getAttribute('data-query');
+  document.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('searchInput').value = query;
+  doSearch();
+}
+
+function showSearchLoading(msg) {
+  document.getElementById('searchResult').innerHTML = `
+    <div class="result-box">
+      <div class="loading-wrap"><div class="spinner"></div><span>${msg}</span></div>
+    </div>`;
+}
+
+// ── 레시피 탭 ─────────────────────────────
+async function loadRecipeDetail(elOrName) {
+  const name = String(typeof elOrName === 'string' ? elOrName : elOrName.dataset?.name || elOrName);
+  currentRecipeName = name;
+  document.getElementById('recipeDetail').innerHTML = `
+    <div class="card"><div class="loading-wrap"><div class="spinner"></div><span>"${name}" 상세 레시피 불러오는 중...</span></div></div>`;
+  switchTab('recipe', document.querySelectorAll('nav button')[1]);
+
+      const prompt = `"${name}" 한국 반찬의 상세 레시피를 인터넷에서 검색해서 아래 JSON 형식으로만 답하세요. 다른 텍스트 없이 JSON만:
+{
+  "name": "반찬 이름",
+  "emoji": "어울리는 이모지 1개",
+  "time": "조리시간",
+  "difficulty": "쉬움/보통/어려움",
+  "servings": "기준 인분",
+  "mainIngredient": "메인 재료 이름 (예: 돼지고기, 시금치, 감자)",
+  "mainIngredientGram": 메인재료 기준 그램(숫자),
+  "ingredients": ["재료1 Xg", "재료2 Xg"],
+  "sauce": [{"name": "양념명", "spoon": 숫자}],
+  "steps": ["1단계 설명", "2단계 설명"]
+}
+sauce의 spoon은 성인 밥숟가락(15ml) 기준 숟가락 수로 변환해서 소수점 0.5 단위로 표시하세요. 예: 간장 45ml → 3, 소금 3g → 0.5`;
+
+  try {
+    const resp = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] })
+    });
+    const data = await resp.json();
+    const content = Array.isArray(data.content) ? data.content : [];
+    const text = content.filter(b => b && b.type === 'text').map(b => b.text).join('');
+    if (!text) throw new Error('응답이 비어있어요');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const r = JSON.parse(clean);
+    currentRecipeText = JSON.stringify(r);
+    renderRecipeDetail(r);
+  } catch(e) {
+    document.getElementById('recipeDetail').innerHTML = `<div class="card" style="color:#e74c3c;">레시피를 불러오지 못했어요. 다시 시도해주세요.</div>`;
+  }
+}
+
+function renderRecipeDetail(r) {
+  document.getElementById('recipeDetail').innerHTML = `
+    <div class="card">
+      <h2 style="font-size:1.3rem;margin-bottom:8px;">${r.emoji || '🍽'} ${r.name} <span class="badge-web">🌐 웹 검색</span></h2>
+      <div style="display:flex;gap:14px;font-size:0.82rem;color:#999;margin-bottom:12px;">
+        <span>⏱ ${r.time}</span><span>👨‍🍳 ${r.difficulty}</span><span>👥 ${r.servings}</span>
+      </div>
+      <div style="font-size:0.85rem;color:#555;"><strong>재료:</strong> ${(r.ingredients||[]).join(', ')}</div>
+    </div>
+    <div class="gram-calc">
+      <h3>⚖️ 양념 계산기 <span style="font-size:0.78rem;font-weight:400;color:#b07050;">성인 밥숟가락 기준</span></h3>
+      <div class="gram-row">
+        <label><strong style="color:#e8703a;">${r.mainIngredient||'메인 재료'}</strong> 양 (g)</label>
+        <input type="number" id="baseGram" value="${r.mainIngredientGram||200}" oninput="calcSauce()" min="1">
+        <span style="font-size:0.82rem;color:#888;">g</span>
+      </div>
+      <div class="calc-result" id="sauceResult"></div>
+    </div>
+    <div class="steps card">
+      <h3 style="font-size:1rem;font-weight:700;margin-bottom:14px;">📋 조리 순서</h3>
+      ${(r.steps||[]).map((s,i)=>`<div class="step"><div class="step-num">${i+1}</div><div class="step-text">${s}</div></div>`).join('')}
+    </div>
+    <button class="save-btn" onclick="saveRecipe()">💾 저장함에 추가</button>`;
+  
+  // 양념 계산
+  window._sauce = r.sauce || [];
+  window._sauceBase = r.mainIngredientGram || 200;
+  calcSauce();
+}
+
+function calcSauce() {
+  const base = parseFloat(document.getElementById('baseGram')?.value) || window._sauceBase || 200;
+  const ratio = base / (window._sauceBase || 200);
+  const items = window._sauce || [];
+  if (!items.length) { document.getElementById('sauceResult').textContent = '양념 정보 없음'; return; }
+  document.getElementById('sauceResult').innerHTML = items.map(i => {
+    const val = i.spoon * ratio;
+    const display = val < 0.5 ? '약간' : (Math.round(val * 2) / 2) + '숟가락';
+    return `<span style="color:#555">${i.name}:</span> <strong style="color:#e8703a">${display}</strong>　`;
+  }).join('');
+}
+
+// ── 저장함 ────────────────────────────────
+function saveRecipe() {
+  if (!currentRecipeName) return;
+  if (savedList.find(x => x.name === currentRecipeName)) { showToast('이미 저장된 레시피예요!'); return; }
+  try {
+    const r = JSON.parse(currentRecipeText);
+    savedList.push(r);
+    showToast(`'${r.name}' 저장 완료! 💾`);
+  } catch { showToast('저장 중 오류가 발생했어요.'); }
+}
+
+function renderSaved() {
+  const el = document.getElementById('savedList');
+  if (!savedList.length) {
+    el.innerHTML = `<div class="saved-empty"><div class="icon">📭</div><p>저장된 레시피가 없어요</p><p style="font-size:0.8rem;margin-top:6px;color:#ccc">레시피 탭에서 저장해보세요</p></div>`;
+    return;
+  }
+  el.innerHTML = savedList.map((r,i) => `
+    <div class="saved-item">
+      <div class="emoji">${r.emoji||'🍽'}</div>
+      <div class="detail">
+        <h4>${r.name}</h4>
+        <p>⏱ ${r.time||'-'} &nbsp; 👨‍🍳 ${r.difficulty||'-'} &nbsp; 👥 ${r.servings||'-'}</p>
+        <p style="margin-top:4px;color:#aaa;">${(r.ingredients||[]).slice(0,3).join(', ')}${r.ingredients?.length>3?'...':''}</p>
+      </div>
+      <button class="del-btn" onclick="deleteSaved(${i})">삭제</button>
+    </div>`).join('');
+}
+
+function deleteSaved(i) {
+  savedList.splice(i, 1);
+  renderSaved();
+  showToast('삭제했어요');
+}
+
+// ── AI 추천 탭 ────────────────────────────
+function toggleChip(el, group) {
+  document.querySelectorAll('.chip').forEach(c => {
+    if ((c.getAttribute('onclick')||'').includes(`'${group}'`)) c.classList.remove('selected');
+  });
+  el.classList.add('selected');
+}
+
+function addIng() {
+  const inp = document.getElementById('ingInput');
+  const val = inp.value.trim();
+  if (!val || ingredients.includes(val)) { inp.value=''; return; }
+  ingredients.push(val);
+  renderIngTags();
+  inp.value = '';
+}
+
+function renderIngTags() {
+  document.getElementById('ingTags').innerHTML = ingredients.map(i =>
+    `<span class="ing-tag" onclick="removeIng('${i}')">${i} ✕</span>`).join('');
+}
+
+function removeIng(v) {
+  ingredients = ingredients.filter(i => i !== v);
+  renderIngTags();
+}
+
+async function getAiRecommend() {
+  const meal = [...document.querySelectorAll('.chip')].filter(c => c.classList.contains('selected') && (c.getAttribute('onclick')||'').includes("'meal'")).map(c => c.textContent).join(', ');
+  const time = [...document.querySelectorAll('.chip')].filter(c => c.classList.contains('selected') && (c.getAttribute('onclick')||'').includes("'time'")).map(c => c.textContent).join(', ');
+  const ings = ingredients.join(', ');
+
+  const prompt = `인터넷에서 최신 한국 반찬 레시피를 검색해서, 아래 조건에 딱 맞는 반찬 3가지를 추천해주세요.
+${meal ? `- 식사 유형: ${meal}` : ''}
+${time ? `- 조리 시간: ${time}` : ''}
+${ings ? `- 활용할 재료: ${ings}` : ''}
+
+각 반찬을 아래 형식으로 정리해주세요:
+
+🍽 [반찬 이름]
+• 재료: (핵심 재료 3~4가지)
+• 조리법: (2~3줄 요약)
+• 포인트: (맛 내는 핵심 팁)`;
+
+  const btn = document.getElementById('aiBtn');
+  btn.disabled = true;
+  btn.innerHTML = '🌐 검색 중...';
+  const res = document.getElementById('aiResult');
+  res.style.display = 'block';
+  res.innerHTML = `<div class="result-box"><div class="loading-wrap"><div class="spinner"></div><span>인터넷에서 최신 레시피를 검색하고 있어요...</span></div></div>`;
+
+  await callClaudeWithSearch(prompt, 'aiResult', null);
+  btn.disabled = false;
+  btn.innerHTML = '🌐 웹 검색으로 AI 추천 받기';
+}
+
+// ── 공통 Claude + 웹검색 호출 ─────────────
+async function callClaudeWithSearch(prompt, targetId, recipeName) {
+  try {
+    const resp = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] })
+    });
+    const data = await resp.json();
+
+    // 응답 구조 안전하게 처리
+    const content = data.content || data.completion || [];
+    const text = Array.isArray(content)
+      ? content.filter(b => b && b.type === 'text').map(b => b.text).join('')
+      : (typeof content === 'string' ? content : JSON.stringify(data));
+
+    // 마크다운 → HTML 간단 변환
+    const html = text
+      .replace(/### (.+)/g, '<h3>$1</h3>')
+      .replace(/## (.+)/g, '<h3>$1</h3>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/^- (.+)/gm, '• $1')
+      .replace(/^\d+\. (.+)/gm, (m,p1,off,str) => m);
+
+    const el = document.getElementById(targetId);
+    el.innerHTML = `
+      <div class="result-box">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;">
+          <span style="font-size:0.82rem;font-weight:700;color:#2980b9;">🌐 웹 검색 결과 반영</span>
+        </div>
+        <div class="result-text">${html}</div>
+        ${recipeName ? `<button class="save-btn" style="margin-top:14px;" onclick="loadRecipeDetail(this.dataset.name)" data-name="${recipeName}">📖 상세 레시피 & 계산기 보기</button>` : ''}
+      </div>`;
+  } catch(e) {
+    document.getElementById(targetId).innerHTML = `<div class="result-box" style="color:#e74c3c;">오류가 발생했어요. 잠시 후 다시 시도해주세요.<br><small>${e.message}</small></div>`;
+  }
+}
+
+// ── 탭 전환 ───────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'saved') renderSaved();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+</script>
+</body>
+</html>
